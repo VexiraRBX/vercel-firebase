@@ -66,6 +66,10 @@ app.get('/api/playerdata', async (req, res) => {
     return res.status(500).json({ error: "Internal Database retrieval failure." });
   }
 });
+// Public Health Check Endpoint for Uptime Monitoring
+app.get('/health', (req, res) => {
+  res.status(200).send('OK');
+});
 
 // Dynamically bind to the active port designated by Render's environment
 const PORT = process.env.PORT || 3000;
