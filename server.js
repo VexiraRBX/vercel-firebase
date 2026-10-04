@@ -1,15 +1,16 @@
 // server.js
 import express from 'express';
-// 1. Import specific modular elements from their respective sub-paths
 import { initializeApp, getApps } from 'firebase-admin/app';
 import { getDatabase } from 'firebase-admin/database';
 
-// Fix: Import the default CommonJS package object first, then extract credential safely
 import pkg from 'firebase-admin';
 const { credential } = pkg;
 
 const app = express();
-app.use(express.json()); // Essential for handling large Roblox JSON string tables
+
+// FIX: Increase body parsing limits to accommodate massive Roblox data string payloads
+app.use(express.json({ limit: '50mb' })); 
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // 2. Safely check if apps are already running using modern getApps() helper
 if (getApps().length === 0) {
@@ -19,7 +20,6 @@ if (getApps().length === 0) {
       clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
       privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
     }),
-    // Fix: Dynamically strips double quotes if passed by the dashboard environment
     databaseURL: process.env.FIREBASE_DATABASE_URL.replace(/"/g, '') 
   });
 }
