@@ -1,28 +1,30 @@
 // server.js
 import express from 'express';
-import admin from 'firebase-admin';
+// 1. Import specific modular elements from their respective sub-paths
+import { initializeApp, getApps } from 'firebase-admin/app';
+import { credential } from 'firebase-admin';
+import { getDatabase } from 'firebase-admin/database';
 
 const app = express();
 app.use(express.json()); // Essential for handling large Roblox JSON string tables
 
-// Initialize Firebase Admin with credentials injected via Render's dashboard environment
-if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.cert({
+// 2. Safely check if apps are already running using modern getApps() helper
+if (getApps().length === 0) {
+  initializeApp({
+    credential: credential.cert({
       projectId: process.env.FIREBASE_PROJECT_ID,
       clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      // Render handles line break encoding cleanly, but this safety check ensures parsing accuracy
       privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
     }),
     databaseURL: process.env.FIREBASE_DATABASE_URL
   });
 }
 
-const db = admin.database(); // References your Realtime Database directly
+// 3. Instantiate database reference using the modular getDatabase() module hook
+const db = getDatabase(); 
 
 // Roblox Saving Endpoint
 app.post('/api/playerdata', async (req, res) => {
-  // Security Authentication check
   const authHeader = req.headers['authorization'];
   if (authHeader !== `Bearer ${process.env.ROBLOX_SECRET_KEY}`) {
     return res.status(401).json({ error: "Unauthorized endpoint request." });
