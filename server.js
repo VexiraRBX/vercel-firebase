@@ -2,8 +2,11 @@
 import express from 'express';
 // 1. Import specific modular elements from their respective sub-paths
 import { initializeApp, getApps } from 'firebase-admin/app';
-import { credential } from 'firebase-admin';
 import { getDatabase } from 'firebase-admin/database';
+
+// Fix: Import the default CommonJS package object first, then extract credential safely
+import pkg from 'firebase-admin';
+const { credential } = pkg;
 
 const app = express();
 app.use(express.json()); // Essential for handling large Roblox JSON string tables
@@ -66,6 +69,7 @@ app.get('/api/playerdata', async (req, res) => {
     return res.status(500).json({ error: "Internal Database retrieval failure." });
   }
 });
+
 // Public Health Check Endpoint for Uptime Monitoring
 app.get('/health', (req, res) => {
   res.status(200).send('OK');
