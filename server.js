@@ -8,11 +8,11 @@ const { credential } = pkg;
 
 const app = express();
 
-// FIX: Increase body parsing limits to accommodate massive Roblox data string payloads
+// Increase body parsing limits to accommodate massive Roblox data string payloads
 app.use(express.json({ limit: '50mb' })); 
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-// 2. Safely check if apps are already running using modern getApps() helper
+// Safely check if apps are already running using modern getApps() helper
 if (getApps().length === 0) {
   initializeApp({
     credential: credential.cert({
@@ -24,8 +24,12 @@ if (getApps().length === 0) {
   });
 }
 
-// 3. Instantiate database reference using the modular getDatabase() module hook
+// Instantiate database reference using the modular getDatabase() module hook
 const db = getDatabase(); 
+
+// ==============================================================
+// PLAYER DATA ENDPOINTS (`PlayerData_v1`)
+// ==============================================================
 
 // Roblox Saving Endpoint
 app.post('/api/playerdata', async (req, res) => {
@@ -42,7 +46,6 @@ app.post('/api/playerdata', async (req, res) => {
   }
 
   try {
-    // Write straight to your existing RTDB structural node
     await db.ref(`PlayerData_v1/Player_${userId}`).set(playerData);
     return res.status(200).json({ success: true });
   } catch (error) {
@@ -64,12 +67,63 @@ app.get('/api/playerdata', async (req, res) => {
   try {
     const snapshot = await db.ref(`PlayerData_v1/Player_${userId}`).once('value');
     const data = snapshot.val();
-    return res.status(200).json(data || null); // Return null if no data matches path
+    return res.status(200).json(data || null);
   } catch (error) {
     console.error("Database Read Crash: ", error);
     return res.status(500).json({ error: "Internal Database retrieval failure." });
   }
 });
+
+// ==============================================================
+// COMMUNITY HIVES ENDPOINTS (`BSSCommunityHives_v1`)
+// ==============================================================
+
+// Community Hives Saving Endpoint
+app.post('/api/communityhives', async (req, res) => {
+  const authHeader = req.headers['authorization'];
+  if (authHeader !== `Bearer ${process.env.ROBLOX_SECRET_KEY}`) {
+    return res.status(401).json({ error: "Unauthorized endpoint request." });
+  }
+
+  const { hiveId } = req.query; // Expects a unique hive/player path indicator
+  const hiveData = req.body;
+
+  if (!hiveId || !hiveData) {
+    return res.status(400).json({ error: "Missing required hiveId or hiveData body." });
+  }
+
+  try {
+    await db.ref(`BSSCommunityHives_v1/${hiveId}`).set(hiveData);
+    return res.status(200).json({ success: true });
+  } catch (error) {
+    console.error("Community Hive Write Crash: ", error);
+    return res.status(500).json({ error: "Internal Database processing failure." });
+  }
+});
+
+// Community Hives Loading Endpoint
+app.get('/api/communityhives', async (req, res) => {
+  const authHeader = req.headers['authorization'];
+  if (authHeader !== `Bearer ${process.env.ROBLOX_SECRET_KEY}`) {
+    return res.status(401).json({ error: "Unauthorized endpoint request." });
+  }
+
+  const { hiveId } = req.query;
+  if (!hiveId) return res.status(400).json({ error: "Missing Target Hive ID parameter." });
+
+  try {
+    const snapshot = await db.ref(`BSSCommunityHives_v1/${hiveId}`).once('value');
+    const data = snapshot.val();
+    return res.status(200).json(data || null);
+  } catch (error) {
+    console.error("Community Hive Read Crash: ", error);
+    return res.status(500).json({ error: "Internal Database retrieval failure." });
+  }
+});
+
+// ==============================================================
+// HEALTH & MAINTENANCE
+// ==============================================================
 
 // Public Health Check Endpoint for Uptime Monitoring
 app.get('/health', (req, res) => {
